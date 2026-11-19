@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VolleyCoach Pro - Tableau Tactique, Rotations, Séances & Stats</title>
+<style>
+  :root {
+    --bg-dark: #0f172a;
+    --bg-panel: #1e293b;
+    --bg-card: #334155;
+    --accent: #f97316;
+    --accent-hover: #ea580c;
+    --blue: #3b82f6;
+    --green: #10b981;
+    --red: #ef4444;
+    --yellow: #eab308;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --court-wood: #d97706;
+    --court-light: #f59e0b;
+    --court-out: #2563eb;
+    --border: #475569;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+  body { background: var(--bg-dark); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  
+  /* Header & Nav */
+  header {
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    padding: 0 20px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.25rem; letter-spacing: -0.5px; }
+  .logo span { color: var(--accent); }
+  nav { display: flex; gap: 6px; height: 100%; align-items: center; }
+  .nav-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .nav-btn:hover { background: rgba(255,255,255,0.05); color: var(--text-main); }
+  .nav-btn.active { background: var(--accent); color: white; }
+
+  /* Main Container */
+  main { flex: 1; overflow: hidden; display: flex; position: relative; }
+  .tab-view { display: none; width: 100%; height: 100%; overflow: auto; }
+  .tab-view.active { display: flex; }
+
+  /* Common UI Elements */
+  .sidebar {
+    width: 300px;
+    background: var(--bg-panel);
+    border-right: 1px solid var(--border);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  .sidebar-right { border-right: none; border-left: 1px solid var(--border); }
+  .section-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; }
+  .btn {
+    background: var(--bg-card);
+    color: var(--text-main);
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: 0.15s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .btn:hover { background: #475569; }
+  .btn.active { background: var(--blue); border-color: var(--blue); color: white; }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-success { background: var(--green); border-color: var(--green); color: white; }
+  .btn-danger { background: var(--red); border-color: var(--red); color: white; }
+  .btn-sm { padding: 5px 8px; font-size: 0.78rem; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  
+  input, select, textarea {
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    width: 100%;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+
+  /* TAB 1: TACTICAL BOARD */
+  .board-workspace {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #0b1120;
+    padding: 16px;
+    position: relative;
+  }
+  .canvas-wrapper {
+    position: relative;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--court-out);
+  }
+  canvas { display: block; cursor: crosshair; touch-action: none; }
+  
+  /* Animation Timeline Bar */
+  .timeline-bar {
+    width: 100%;
+    max-width: 820px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 16px;
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .frames-list { display: flex; gap: 6px; flex: 1; overflow-x: auto; padding: 2px; }
+  .frame-pill {
+    background: var(--bg-card);
+    border: 2px solid transparent;
+    color: var(--text-main);
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+  .frame-pill.active { border-color: var(--accent); background: rgba(249, 115, 22, 0.2); }
+
+  /* TAB 2: ROTATIONS & GAME PLANS */
+  .rot-container { flex: 1; padding: 24px; display: flex; gap: 24px; overflow-y: auto; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
+  .court-box {
+    background: var(--court-out);
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  }
+  .volleyball-court-grid {
+    width: 360px;
+    height: 360px;
+    background: #f59e0b;
+    border: 4px solid white;
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: 1fr 2fr;
+  }
+  .net-line {
+    position: absolute;
+    top: -6px; left: -12px; right: -12px;
+    height: 8px;
+    background: repeating-linear-gradient(90deg, #fff, #fff 8px, #1e293b 8px, #1e293b 16px);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  }
+  .attack-line-3m {
+    position: absolute;
+    top: 33.33%; left: 0; right: 0;
+    height: 3px;
+    background: white;
+  }
+  .zone-cell {
+    border: 1px dashed rgba(255,255,255,0.45);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 8px;
+  }
+  .zone-num { position: absolute; top: 4px; left: 6px; font-size: 0.75rem; font-weight: 800; color: rgba(255,255,255,0.7); }
+  .player-badge {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    color: white;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    border: 2px solid white;
+    text-align: center;
+    line-height: 1.1;
+  }
+  .player-badge small { font-size: 0.65rem; font-weight: 600; opacity: 0.9; }
+  .role-P { background: #ef4444; }
+  .role-R4 { background: #3b82f6; }
+  .role-C { background: #10b981; }
+  .role-Pt { background: #8b5cf6; }
+  .role-L { background: #eab308; color: #0f172a; }
+
+  .gameplan-panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    width: 460px;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  /* TAB 3: SESSION PLANNER */
+  .planner-container { flex: 1; padding: 24px; max-width: 1100px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 20px; }
+  .session-header-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 12px;
+    align-items: end;
+  }
+  .drill-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-left: 5px solid var(--accent);
+    border-radius: 8px;
+    padding: 14px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+  .drill-meta { display: flex; gap: 10px; margin-top: 6px; font-size: 0.8rem; color: var(--text-muted); }
+  .tag { background: var(--bg-card); padding: 2px 8px; border-radius: 4px; color: var(--text-main); font-weight: 600; }
+
+  /* TAB 4: LIVE STATS */
+  .stats-container { flex: 1; padding: 20px; display: flex; gap: 20px; overflow-y: auto; flex-wrap: wrap; }
+  .stats-input-panel { flex: 1; min-width: 340px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+  .stats-dashboard { flex: 1.4; min-width: 400px; display: flex; flex-direction: column; gap: 16px; }
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .kpi-card { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px; text-align: center; }
+  .kpi-val { font-size: 1.6rem; font-weight: 800; color: var(--accent); }
+  .kpi-lbl { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-top: 4px; }
+  table { width: 100%; border-collapse: collapse; background: var(--bg-panel); border-radius: 10px; overflow: hidden; }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+  th { background: var(--bg-card); color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; }
+  .stat-btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .stat-action-btn { padding: 12px 8px; border-radius: 8px; border: none; font-weight: 700; color: white; cursor: pointer; font-size: 0.85rem; transition: transform 0.1s; }
+  .stat-action-btn:active { transform: scale(0.96); }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .tab-view { flex-direction: column; }
+    .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); max-height: 240px; }
+    .session-header-card { grid-template-columns: 1fr; }
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🏐 Volley<span>Coach</span> Pro <small style="font-size:0.7rem; background:#334155; padding:2px 6px; border-radius:4px; color:#94a3b8; margin-left:4px;">V1</small></div>
+  <nav>
+    <button class="nav-btn active" onclick="switchTab('board', this)">🎯 Tableau & Animation</button>
+    <button class="nav-btn" onclick="switchTab('rotations', this)">🔄 Rotations & Plan de jeu</button>
+    <button class="nav-btn" onclick="switchTab('planner', this)">📋 Séance d'entraînement</button>
+    <button class="nav-btn" onclick="switchTab('stats', this)">📊 Statistiques Live</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ==================== 1. TABLEAU TACTIQUE & ANIMATION ==================== -->
+  <div id="tab-board" class="tab-view active">
+    <div class="sidebar">
+      <div>
+        <div class="section-title">1. Mode & Outils</div>
+        <div class="grid-2">
+          <button class="btn active" id="tool-move" onclick="setTool('move')">✋ Déplacer</button>
+          <button class="btn" id="tool-pass" onclick="setTool('pass')">➡️ Passe (Trait)</button>
+          <button class="btn" id="tool-run" onclick="setTool('run')">〰️ Course (Pointillé)</button>
+          <button class="btn" id="tool-spike" onclick="setTool('spike')">⚡ Attaque (Rouge)</button>
+          <button class="btn" id="tool-zone" onclick="setTool('zone')">⬜ Zone cible</button>
+          <button class="btn" onclick="undoDrawing()">↩️ Annuler trait</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">2. Ajouter sur le terrain</div>
+        <div class="grid-3">
+          <button class="btn btn-sm" style="border-color:#3b82f6" onclick="addToken('A', '#3b82f6')">🔵 Joueur A</button>
+          <button class="btn btn-sm" style="border-color:#ef4444" onclick="addToken('B', '#ef4444')">🔴 Adv. B</button>
+          <button class="btn btn-sm" style="border-color:#eab308" onclick="addToken('🏐', '#eab308')">🏐 Ballon</button>
+          <button class="btn btn-sm" onclick="addToken('P', '#10b981')">🟢 Passeur</button>
+          <button class="btn btn-sm" onclick="addToken('L', '#f59e0b')">🟡 Libéro</button>
+          <button class="btn btn-sm" onclick="addToken('▲', '#ec4899')">🔺 Plot</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">3. Modèles rapides & Terrain</div>
+        <div class="grid-2">
+          <button class="btn btn-sm" onclick="toggleCourtView()">🔄 Vue: <span id="court-view-lbl">Complet</span></button>
+          <button class="btn btn-sm" onclick="clearDrawings()">🧹 Effacer traits</button>
+          <button class="btn btn-sm" onclick="loadPreset('recep')">📥 Preset Récep 3</button>
+          <button class="btn btn-sm" onclick="loadPreset('attaque')">📥 Preset Combinaison</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">4. Sauvegarder l'exercice</div>
+        <input type="text" id="drill-name-input" placeholder="Nom de l'exercice (ex: Récep + Pipe)" style="margin-bottom:8px;">
+        <div class="grid-2">
+          <button class="btn btn-primary btn-sm" onclick="saveDrillToLibrary()">💾 Enregistrer</button>
+          <button class="btn btn-success btn-sm" onclick="sendDrillToSession()">➕ Vers Séance</button>
+        </div>
+        <select id="saved-drills-select" onchange="loadSavedDrill(this.value)" style="margin-top:8px;">
+          <option value="">-- Charger un exercice sauvé --</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="board-workspace">
+      <div class="canvas-wrapper">
+        <canvas id="tacticalCanvas" width="760" height="440"></canvas>
+      </div>
+
+      <div class="timeline-bar">
+        <button class="btn btn-success btn-sm" id="play-anim-btn" onclick="togglePlayAnimation()">▶️ Lire l'animation</button>
+        <button class="btn btn-sm" onclick="addKeyframe()">➕ Ajouter Étape</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteKeyframe()">🗑️ Suppr. Étape</button>
+        <div class="frames-list" id="frames-container"></div>
+        <div style="display:flex; align-items:center; gap:6px; font-size:0.8rem;">
+          <span>Vitesse:</span>
+          <select id="anim-speed" style="width:auto; padding:4px;">
+            <option value="1200">Lente</option>
+            <option value="800" selected>Normale</option>
+            <option value="450">Rapide</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 2. ROTATIONS & PLANS DE JEU ==================== -->
+  <div id="tab-rotations" class="tab-view">
+    <div class="rot-container">
+      <div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h3>Positionnement sur le terrain</h3>
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-sm" onclick="prevRotation()">◀️ Rot. Préc.</button>
+            <span id="current-rot-badge" style="background:var(--accent); padding:5px 12px; border-radius:6px; font-weight:800;">P1 (Passeur en 1)</span>
+            <button class="btn btn-sm" onclick="nextRotation()">Rot. Suiv. ▶️</button>
+          </div>
+        </div>
+
+        <div class="court-box">
+          <div class="volleyball-court-grid" id="rotation-grid">
+            <div class="net-line"></div>
+            <div class="attack-line-3m"></div>
+          </div>
+        </div>
+        <div style="margin-top:12px; display:flex; gap:10px; justify-content:center; font-size:0.8rem; flex-wrap:wrap;">
+          <span><b style="color:#ef4444">● P</b> : Passeur</span>
+          <span><b style="color:#3b82f6">● R4</b> : Récep-Attaquant</span>
+          <span><b style="color:#10b981">● C</b> : Central</span>
+          <span><b style="color:#8b5cf6">● Pt</b> : Pointu</span>
+          <span><b style="color:#eab308">● L</b> : Libéro (remplace C arrière)</span>
+        </div>
+      </div>
+
+      <div class="gameplan-panel">
+        <div class="section-title">Configuration Tactique (Système 5-1)</div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" id="libero-active" checked onchange="renderRotation()" style="width:auto;">
+          <label for="libero-active" style="font-size:0.9rem;">Activer le Libéro sur le Central arrière</label>
+        </div>
+
+        <div>
+          <label class="section-title">Système de Réception</label>
+          <select id="gp-recep" onchange="updateGameplanNotes()">
+            <option value="Réception à 3 (R4 + R4 + Libéro)">Réception à 3 joueurs (Standard 5-1)</option>
+            <option value="Réception à 4 (avec Pointu ou Passeur)">Réception à 4 joueurs (Sécurisée)</option>
+            <option value="Réception en W (Formation débutant / jeune)">Réception en W</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="section-title">Système Défensif</label>
+          <select id="gp-defense" onchange="updateGameplanNotes()">
+            <option value="Défense 6 avancé (Couverture derrière le bloc)">6 Avancé (Centre monte derrière bloc)</option>
+            <option value="Défense 6 reculé (Protection fond de terrain)">6 Reculé (Ailes rentrent, 6 au fond)</option>
+            <option value="Bloc à 2 systématique aux ailes">Bloc à 2 aux ailes + 1 au centre</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="section-title">Consignes spécifiques pour cette rotation (<span id="gp-rot-title">P1</span>)</label>
+          <textarea id="gp-notes" rows="5" placeholder="Ex: Le passeur pénètre depuis le poste 1, le R4 avant passe en réception en 5, combinaison fixe devant + pipe..."></textarea>
+        </div>
+
+        <button class="btn btn-primary" onclick="saveGameplanNote()">💾 Sauvegarder les consignes de la rotation</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 3. PLANIFICATEUR DE SÉANCE ==================== -->
+  <div id="tab-planner" class="tab-view">
+    <div class="planner-container">
+      <div class="session-header-card">
+        <div>
+          <label class="section-title">Titre de la séance</label>
+          <input type="text" id="session-title" value="Séance Mardi - Réception & Transition">
+        </div>
+        <div>
+          <label class="section-title">Objectif principal</label>
+          <select id="session-theme">
+            <option>Réception & Side-out</option>
+            <option>Service / Bloc-Défense</option>
+            <option>Technique individuelle</option>
+            <option>Préparation Match</option>
+          </select>
+        </div>
+        <div>
+          <label class="section-title">Durée totale</label>
+          <div style="font-size:1.3rem; font-weight:800; color:var(--green); padding:6px 0;" id="total-duration">45 min</div>
+        </div>
+        <button class="btn btn-primary" onclick="window.print()">🖨️ Imprimer / PDF</button>
+      </div>
+
+      <div style="background:var(--bg-panel); padding:16px; border-radius:10px; border:1px solid var(--border); display:flex; gap:10px; flex-wrap:wrap; align-items:end;">
+        <div style="flex:2; min-width:200px;">
+          <label class="section-title">Ajouter un bloc / exercice</label>
+          <input type="text" id="new-drill-title" placeholder="Nom de l'exercice">
+        </div>
+        <div style="flex:1; min-width:130px;">
+          <label class="section-title">Phase</label>
+          <select id="new-drill-phase">
+            <option value="Échauffement">🔥 Échauffement</option>
+            <option value="Technique">🎯 Technique</option>
+            <option value="Situation de jeu">⚔️ Situation de jeu</option>
+            <option value="Match à thème">🏆 Match à thème</option>
+          </select>
+        </div>
+        <div style="width:90px;">
+          <label class="section-title">Durée (min)</label>
+          <input type="number" id="new-drill-time" value="15" min="5" max="90">
+        </div>
+        <div style="flex:1.5; min-width:160px;">
+          <label class="section-title">Matériel / Consignes</label>
+          <input type="text" id="new-drill-mat" placeholder="Ex: 12 ballons, 4 plots">
+        </div>
+        <button class="btn btn-success" onclick="addSessionItem()">➕ Ajouter</button>
+      </div>
+
+      <div id="session-list" style="display:flex; flex-direction:column; gap:10px;"></div>
+    </div>
+  </div>
+
+  <!-- ==================== 4. STATISTIQUES LIVE ==================== -->
+  <div id="tab-stats" class="tab-view">
+    <div class="stats-container">
+      <div class="stats-input-panel">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div class="section-title" style="margin:0;">1. Sélectionner le joueur</div>
+          <button class="btn btn-sm" onclick="addNewPlayerStat()">➕ Joueur</button>
+        </div>
+        <div id="player-selector-grid" class="grid-3"></div>
+
+        <div>
+          <div class="section-title">2. Enregistrer une action (<span id="selected-player-lbl" style="color:var(--accent)">#4 Lucas (R4)</span>)</div>
+          <div class="stat-btn-grid">
+            <button class="stat-action-btn" style="background:#10b981;" onclick="recordStat('ace')">⚡ Service Ace</button>
+            <button class="stat-action-btn" style="background:#3b82f6;" onclick="recordStat('srv_ok')">🏐 Service In</button>
+            <button class="stat-action-btn" style="background:#ef4444;" onclick="recordStat('srv_err')">❌ Faute Service</button>
+
+            <button class="stat-action-btn" style="background:#10b981;" onclick="recordStat('rec_perf')">💎 Récep ++</button>
+            <button class="stat-action-btn" style="background:#3b82f6;" onclick="recordStat('rec_ok')">👍 Récep +</button>
+            <button class="stat-action-btn" style="background:#ef4444;" onclick="recordStat('rec_err')">❌ Récep Faute</button>
+
+            <button class="stat-action-btn" style="background:#10b981;" onclick="recordStat('att_kill')">🔥 Attaque Point</button>
+            <button class="stat-action-btn" style="background:#f59e0b; color:#0f172a;" onclick="recordStat('att_def')">🛡️ Att. Défendue</button>
+            <button class="stat-action-btn" style="background:#ef4444;" onclick="recordStat('att_err')">❌ Attaque Faute</button>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:auto;">
+          <button class="btn btn-sm" onclick="undoLastStat()" style="flex:1;">↩️ Annuler dernière action</button>
+          <button class="btn btn-danger btn-sm" onclick="resetStats()">🗑️ Réinitialiser Match</button>
+        </div>
+      </div>
+
+      <div class="stats-dashboard">
+        <div class="kpi-row">
+          <div class="kpi-card">
+            <div class="kpi-val" id="kpi-eff-att">0%</div>
+            <div class="kpi-lbl">Efficacité Attaque</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-val" id="kpi-pos-rec" style="color:var(--blue)">0%</div>
+            <div class="kpi-lbl">Récep Positive (++/+)</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-val" id="kpi-aces" style="color:var(--green)">0</div>
+            <div class="kpi-lbl">Aces</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-val" id="kpi-errors" style="color:var(--red)">0</div>
+            <div class="kpi-lbl">Fautes Directes</div>
+          </div>
+        </div>
+
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Joueur</th>
+                <th>Pts Gagnés</th>
+                <th>Service (Ace/Tot/Fte)</th>
+                <th>Réception (++ / %Pos)</th>
+                <th>Attaque (Pt/Tot/%Eff)</th>
+                <th>Total Fautes</th>
+              </tr>
+            </thead>
+            <tbody id="stats-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+// ==================== NAVIGATION ====================
+function switchTab(tabId, btn) {
+  document.querySelectorAll('.tab-view').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + tabId).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ==================== 1. TABLEAU TACTIQUE & ANIMATION ====================
+const canvas = document.getElementById('tacticalCanvas');
+const ctx = canvas.getContext('2d');
+
+let isHalfCourt = false;
+let currentTool = 'move';
+let isDrawing = false;
+let startX = 0, startY = 0;
+let currentX = 0, currentY = 0;
+let draggedToken = null;
+
+let keyframes = [
+  {
+    tokens: [
+      { id: 1, label: 'P', color: '#10b981', x: 520, y: 120 },
+      { id: 2, label: 'R4', color: '#3b82f6', x: 640, y: 310 },
+      { id: 3, label: 'L', color: '#f59e0b', x: 540, y: 350 },
+      { id: 4, label: 'C', color: '#3b82f6', x: 430, y: 160 },
+      { id: 5, label: '🏐', color: '#eab308', x: 120, y: 220 }
+    ],
+    drawings: []
+  }
+];
+let currentFrameIdx = 0;
+let isPlaying = false;
+let interpTokens = null;
+
+function setTool(tool) {
+  currentTool = tool;
+  document.querySelectorAll('#tab-board .sidebar .btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('tool-' + tool);
+  if (btn) btn.classList.add('active');
+  canvas.style.cursor = tool === 'move' ? 'grab' : 'crosshair';
+}
+
+function toggleCourtView() {
+  isHalfCourt = !isHalfCourt;
+  document.getElementById('court-view-lbl').innerText = isHalfCourt ? 'Demi-terrain' : 'Complet';
+  renderBoard();
+}
+
+function drawCourt() {
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.fillStyle = '#1d4ed8';
+  ctx.fillRect(0, 0, w, h);
+
+  const padX = 50, padY = 40;
+  const cw = w - padX * 2;
+  const ch = h - padY * 2;
+
+  ctx.fillStyle = '#f59e0b';
+  ctx.fillRect(padX, padY, cw, ch);
+
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(padX, padY, cw, ch);
+
+  if (!isHalfCourt) {
+    const midX = w / 2;
+    ctx.beginPath();
+    ctx.moveTo(midX, padY - 12);
+    ctx.lineTo(midX, padY + ch + 12);
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+
+    const halfW = cw / 2;
+    const line3mLeft = midX - halfW / 3;
+    const line3mRight = midX + halfW / 3;
+
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(line3mLeft, padY);
+    ctx.lineTo(line3mLeft, padY + ch);
+    ctx.moveTo(line3mRight, padY);
+    ctx.lineTo(line3mRight, padY + ch);
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.font = 'bold 18px sans-serif';
+    ctx.fillText('4', midX + 35, padY + 45);
+    ctx.fillText('3', midX + 35, padY + ch/2 + 6);
+    ctx.fillText('2', midX + 35, padY + ch - 30);
+    ctx.fillText('5', w - padX - 55, padY + 45);
+    ctx.fillText('6', w - padX - 55, padY + ch/2 + 6);
+    ctx.fillText('1', w - padX - 55, padY + ch - 30);
+  } else {
+    const netY = padY + 20;
+    ctx.beginPath();
+    ctx.moveTo(padX - 15, netY);
+    ctx.lineTo(padX + cw + 15, netY);
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+
+    const line3mY = netY + (ch - 20) / 3;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(padX, line3mY);
+    ctx.lineTo(padX + cw, line3mY);
+    ctx.stroke();
+  }
+}
+
+function drawArrow(fromX, fromY, toX, toY, color, dashed = false) {
+  const headlen = 13;
+  const dx = toX - fromX;
+  const dy = toY - fromY;
+  const angle = Math.atan2(dy, dx);
+
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 3.5;
+  if (dashed) ctx.setLineDash([8, 6]);
+
+  ctx.beginPath();
+  ctx.moveTo(fromX, fromY);
+  ctx.lineTo(toX, toY);
+  ctx.stroke();
+
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(toX, toY);
+  ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6));
+  ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 6), toY - headlen * Math.sin(angle + Math.PI / 6));
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawSingleShape(d) {
+  if (d.type === 'pass') drawArrow(d.x1, d.y1, d.x2, d.y2, '#ffffff', false);
+  else if (d.type === 'run') drawArrow(d.x1, d.y1, d.x2, d.y2, '#0f172a', true);
+  else if (d.type === 'spike') drawArrow(d.x1, d.y1, d.x2, d.y2, '#ef4444', false);
+  else if (d.type === 'zone') {
+    ctx.save();
+    ctx.fillStyle = 'rgba(16, 185, 129, 0.35)';
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 2;
+    ctx.fillRect(d.x1, d.y1, d.x2 - d.x1, d.y2 - d.y1);
+    ctx.strokeRect(d.x1, d.y1, d.x2 - d.x1, d.y2 - d.y1);
+    ctx.restore();
+  }
+}
+
+function renderBoard() {
+  drawCourt();
+  const frame = keyframes[currentFrameIdx];
+  
+  frame.drawings.forEach(d => drawSingleShape(d));
+  if (isDrawing && currentTool !== 'move') {
+    drawSingleShape({ type: currentTool, x1: startX, y1: startY, x2: currentX, y2: currentY });
+  }
+
+  const tokensToDraw = interpTokens || frame.tokens;
+  tokensToDraw.forEach(t => {
+    ctx.save();
+    ctx.beginPath();
+    const r = t.label === '🏐' ? 14 : 19;
+    ctx.arc(t.x, t.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = t.color;
+    ctx.fill();
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = t.label === '🏐' ? '16px sans-serif' : 'bold 13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(t.label, t.x, t.y + 1);
+    ctx.restore();
+  });
+}
+
+function getCoords(e) {
+  const rect = canvas.getBoundingClientRect();
+  const clientX = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches && e.touches.length ? e.touches[0].clientY : e.clientY;
+  return {
+    x: (clientX - rect.left) * (canvas.width / rect.width),
+    y: (clientY - rect.top) * (canvas.height / rect.height)
+  };
+}
+
+function handleStart(e) {
+  if (isPlaying) return;
+  if (e.touches) e.preventDefault();
+  const pos = getCoords(e);
+  startX = currentX = pos.x;
+  startY = currentY = pos.y;
+
+  if (currentTool === 'move') {
+    const tokens = keyframes[currentFrameIdx].tokens;
+    for (let i = tokens.length - 1; i >= 0; i--) {
+      if (Math.hypot(tokens[i].x - pos.x, tokens[i].y - pos.y) <= 24) {
+        draggedToken = tokens[i];
+        break;
+      }
+    }
+  } else {
+    isDrawing = true;
+  }
+}
+
+function handleMove(e) {
+  if (!draggedToken && !isDrawing) return;
+  if (e.touches) e.preventDefault();
+  const pos = getCoords(e);
+  currentX = pos.x;
+  currentY = pos.y;
+
+  if (draggedToken) {
+    draggedToken.x = pos.x;
+    draggedToken.y = pos.y;
+    renderBoard();
+  } else if (isDrawing) {
+    renderBoard();
+  }
+}
+
+function handleEnd() {
+  if (draggedToken) {
+    draggedToken = null;
+  }
+  if (isDrawing) {
+    isDrawing = false;
+    if (Math.hypot(currentX - startX, currentY - startY) > 10) {
+      keyframes[currentFrameIdx].drawings.push({
+        type: currentTool, x1: startX, y1: startY, x2: currentX, y2: currentY
+      });
+    }
+    renderBoard();
+  }
+}
+
+canvas.addEventListener('mousedown', handleStart);
+canvas.addEventListener('mousemove', handleMove);
+window.addEventListener('mouseup', handleEnd);
+canvas.addEventListener('touchstart', handleStart, { passive: false });
+canvas.addEventListener('touchmove', handleMove, { passive: false });
+window.addEventListener('touchend', handleEnd);
+
+function addToken(label, color) {
+  const frame = keyframes[currentFrameIdx];
+  const newId = Date.now() + Math.random();
+  frame.tokens.push({ id: newId, label, color, x: canvas.width / 2 + (Math.random()*40-20), y: canvas.height / 2 + (Math.random()*40-20) });
+  renderBoard();
+}
+
+function undoDrawing() {
+  keyframes[currentFrameIdx].drawings.pop();
+  renderBoard();
+}
+
+function clearDrawings() {
+  keyframes[currentFrameIdx].drawings = [];
+  renderBoard();
+}
+
+function renderFramesUI() {
+  const container = document.getElementById('frames-container');
+  container.innerHTML = '';
+  keyframes.forEach((_, idx) => {
+    const pill = document.createElement('button');
+    pill.className = 'frame-pill' + (idx === currentFrameIdx ? ' active' : '');
+    pill.innerText = 'Étape ' + (idx + 1);
+    pill.onclick = () => {
+      if (isPlaying) return;
+      currentFrameIdx = idx;
+      renderFramesUI();
+      renderBoard();
+    };
+    container.appendChild(pill);
+  });
+}
+
+function addKeyframe() {
+  if (isPlaying) return;
+  const current = keyframes[currentFrameIdx];
+  const clone = JSON.parse(JSON.stringify(current));
+  clone.drawings = [];
+  keyframes.splice(currentFrameIdx + 1, 0, clone);
+  currentFrameIdx++;
+  renderFramesUI();
+  renderBoard();
+}
+
+function deleteKeyframe() {
+  if (keyframes.length <= 1 || isPlaying) return;
+  keyframes.splice(currentFrameIdx, 1);
+  currentFrameIdx = Math.max(0, currentFrameIdx - 1);
+  renderFramesUI();
+  renderBoard();
+}
+
+function togglePlayAnimation() {
+  const btn = document.getElementById('play-anim-btn');
+  if (isPlaying) {
+    isPlaying = false;
+    interpTokens = null;
+    btn.innerText = "▶️ Lire l'animation";
+    renderBoard();
+    return;
+  }
+  if (keyframes.length < 2) {
+    alert("Ajoutez au moins 2 étapes (keyframes) en déplaçant les joueurs entre chaque étape pour lancer l'animation !");
+    return;
+  }
+
+  isPlaying = true;
+  btn.innerText = "⏹️ Stop";
+  const duration = parseInt(document.getElementById('anim-speed').value);
+
+  function animateTransition(fromIdx, toIdx) {
+    if (!isPlaying) return;
+    currentFrameIdx = fromIdx;
+    renderFramesUI();
+    const startTime = performance.now();
+    const fTokens = keyframes[fromIdx].tokens;
+    const tTokens = keyframes[toIdx].tokens;
+
+    function tick(now) {
+      if (!isPlaying) return;
+      const progress = Math.min(1, (now - startTime) / duration);
+      const ease = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+      interpTokens = fTokens.map(ft => {
+        const target = tTokens.find(tt => tt.id === ft.id) || ft;
+        return {
+          ...ft,
+          x: ft.x + (target.x - ft.x) * ease,
+          y: ft.y + (target.y - ft.y) * ease
+        };
+      });
+      renderBoard();
+
+      if (progress < 1) {
+        requestAnimationFrame(tick);
+      } else {
+        const nextFrom = toIdx;
+        const nextTo = (toIdx + 1) % keyframes.length;
+        if (nextFrom === 0) {
+          isPlaying = false;
+          interpTokens = null;
+          currentFrameIdx = 0;
+          renderFramesUI();
+          renderBoard();
+          btn.innerText = "▶️ Lire l'animation";
+        } else {
+          animateTransition(nextFrom, nextTo);
+        }
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+
+  animateTransition(0, 1);
+}
+
+function loadPreset(type) {
+  isHalfCourt = false;
+  document.getElementById('court-view-lbl').innerText = 'Complet';
+  if (type === 'recep') {
+    keyframes = [
+      {
+        tokens: [
+          { id: 1, label: 'S', color: '#ef4444', x: 80, y: 220 },
+          { id: 2, label: '🏐', color: '#eab308', x: 95, y: 220 },
+          { id: 3, label: 'P', color: '#10b981', x: 440, y: 340 },
+          { id: 4, label: 'R4', color: '#3b82f6', x: 620, y: 120 },
+          { id: 5, label: 'L', color: '#f59e0b', x: 640, y: 220 },
+          { id: 6, label: 'R4', color: '#3b82f6', x: 620, y: 320 }
+        ],
+        drawings: [{ type: 'spike', x1: 100, y1: 220, x2: 635, y2: 220 }]
+      },
+      {
+        tokens: [
+          { id: 1, label: 'S', color: '#ef4444', x: 130, y: 220 },
+          { id: 2, label: '🏐', color: '#eab308', x: 635, y: 220 },
+          { id: 3, label: 'P', color: '#10b981', x: 415, y: 170 },
+          { id: 4, label: 'R4', color: '#3b82f6', x: 520, y: 90 },
+          { id: 5, label: 'L', color: '#f59e0b', x: 635, y: 220 },
+          { id: 6, label: 'R4', color: '#3b82f6', x: 540, y: 340 }
+        ],
+        drawings: [{ type: 'pass', x1: 635, y1: 220, x2: 415, y2: 170 }]
+      },
+      {
+        tokens: [
+          { id: 1, label: 'S', color: '#ef4444', x: 130, y: 220 },
+          { id: 2, label: '🏐', color: '#eab308', x: 400, y: 90 },
+          { id: 3, label: 'P', color: '#10b981', x: 415, y: 170 },
+          { id: 4, label: 'R4', color: '#3b82f6', x: 400, y: 90 },
+          { id: 5, label: 'L', color: '#f59e0b', x: 580, y: 220 },
+          { id: 6, label: 'R4', color: '#3b82f6', x: 500, y: 300 }
+        ],
+        drawings: [{ type: 'spike', x1: 400, y1: 90, x2: 180, y2: 330 }]
+      }
+    ];
+  } else {
+    keyframes = [
+      {
+        tokens: [
+          { id: 1, label: 'P', color: '#10b981', x: 420, y: 160 },
+          { id: 2, label: 'C', color: '#3b82f6', x: 510, y: 220 },
+          { id: 3, label: 'R4', color: '#3b82f6', x: 620, y: 230 },
+          { id: 4, label: 'Pt', color: '#8b5cf6', x: 520, y: 350 },
+          { id: 5, label: '🏐', color: '#eab308', x: 420, y: 160 }
+        ],
+        drawings: [{ type: 'run', x1: 510, y1: 220, x2: 415, y2: 200 }, { type: 'run', x1: 620, y1: 230, x2: 505, y2: 220 }]
+      },
+      {
+        tokens: [
+          { id: 1, label: 'P', color: '#10b981', x: 420, y: 160 },
+          { id: 2, label: 'C', color: '#3b82f6', x: 415, y: 200 },
+          { id: 3, label: 'R4', color: '#3b82f6', x: 505, y: 220 },
+          { id: 4, label: 'Pt', color: '#8b5cf6', x: 410, y: 350 },
+          { id: 5, label: '🏐', color: '#eab308', x: 505, y: 220 }
+        ],
+        drawings: [{ type: 'pass', x1: 420, y1: 160, x2: 505, y2: 220 }, { type: 'spike', x1: 505, y1: 220, x2: 150, y2: 140 }]
+      }
+    ];
+  }
+  currentFrameIdx = 0;
+  renderFramesUI();
+  renderBoard();
+}
+
+let savedDrills = JSON.parse(localStorage.getItem('vc_drills') || '[]');
+function refreshSavedDrillsSelect() {
+  const sel = document.getElementById('saved-drills-select');
+  sel.innerHTML = '<option value="">-- Charger un exercice sauvé --</option>';
+  savedDrills.forEach((d, idx) => {
+    const opt = document.createElement('option');
+    opt.value = idx;
+    opt.innerText = d.name + ` (${d.frames.length} étapes)`;
+    sel.appendChild(opt);
+  });
+}
+
+function saveDrillToLibrary() {
+  const name = document.getElementById('drill-name-input').value.trim() || ('Exercice #' + (savedDrills.length + 1));
+  savedDrills.push({ name, frames: JSON.parse(JSON.stringify(keyframes)) });
+  localStorage.setItem('vc_drills', JSON.stringify(savedDrills));
+  refreshSavedDrillsSelect();
+  alert('Exercice "' + name + '" enregistré !');
+}
+
+function loadSavedDrill(idx) {
+  if (idx === '') return;
+  keyframes = JSON.parse(JSON.stringify(savedDrills[idx].frames));
+  document.getElementById('drill-name-input').value = savedDrills[idx].name;
+  currentFrameIdx = 0;
+  renderFramesUI();
+  renderBoard();
+}
+
+function sendDrillToSession() {
+  const name = document.getElementById('drill-name-input').value.trim() || 'Exercice Tactique Tableau';
+  sessionItems.push({
+    title: name,
+    phase: 'Situation de jeu',
+    time: 15,
+    mat: `Schéma animé (${keyframes.length} étapes)`
+  });
+  renderSession();
+  alert('Exercice ajouté à la séance d'entraînement !');
+}
+
+// ==================== 2. ROTATIONS & PLANS DE JEU ====================
+const baseLineup = [
+  { role: 'P', label: 'Passeur' },
+  { role: 'R4', label: 'Récep-Att 1' },
+  { role: 'C', label: 'Central 1' },
+  { role: 'Pt', label: 'Pointu' },
+  { role: 'R4', label: 'Récep-Att 2' },
+  { role: 'C', label: 'Central 2' }
+];
+let currentRotationIndex = 0;
+const rotationNames = ['P1 (Passeur en 1)', 'P6 (Passeur en 6)', 'P5 (Passeur en 5)', 'P4 (Passeur en 4)', 'P3 (Passeur en 3)', 'P2 (Passeur en 2)'];
+let gameplanNotes = {
+  0: "P1 : Passeur pénètre depuis le poste 1. R4 (en 2) recule en réception. Attaque fixe devant avec C2 + aile en 4.",
+  1: "P6 : Passeur au centre arrière. Les deux R4 (en 1 et 5) + Libéro (en 6) assurent la réception.",
+  2: "P5 : Passeur en 5. Pointu en 2 attaque en fixe ou longue. C1 passe au filet en 4.",
+  3: "P4 : Passeur avant gauche. Réception à 3 (R4 en 5, Libéro en 6, R4 en 1). Pointu attaque aux 3m (poste 1) ou passe en 2.",
+  4: "P3 : Passeur avant centre. Permutations rapides après le service pour ramener le Passeur en 2 et le Pointu en 4.",
+  5: "P2 : Passeur avant droit (position idéale). C2 au centre, R4 en 4, Pointu en 1 (attaque 3m)."
+};
+
+function renderRotation() {
+  const grid = document.getElementById('rotation-grid');
+  grid.innerHTML = '<div class="net-line"></div><div class="attack-line-3m"></div>';
+  
+  const rotated = [];
+  for (let i = 0; i < 6; i++) {
+    rotated.push(baseLineup[(i - currentRotationIndex + 6) % 6]);
+  }
+
+  const useLibero = document.getElementById('libero-active').checked;
+  const visualOrder = [
+    { zone: 4, idx: 3, isBack: false },
+    { zone: 3, idx: 4, isBack: false },
+    { zone: 2, idx: 5, isBack: false },
+    { zone: 5, idx: 2, isBack: true },
+    { zone: 6, idx: 1, isBack: true },
+    { zone: 1, idx: 0, isBack: true }
+  ];
+
+  visualOrder.forEach(cell => {
+    let player = rotated[cell.idx];
+    if (useLibero && cell.isBack && player.role === 'C') {
+      player = { role: 'L', label: 'Libéro' };
+    }
+    const div = document.createElement('div');
+    div.className = 'zone-cell';
+    div.innerHTML = `
+      <span class="zone-num">Zone ${cell.zone}</span>
+      <div class="player-badge role-${player.role}">
+        <span>${player.role}</span>
+        <small>${player.label}</small>
+      </div>
+    `;
+    grid.appendChild(div);
+  });
+
+  document.getElementById('current-rot-badge').innerText = rotationNames[currentRotationIndex];
+  document.getElementById('gp-rot-title').innerText = rotationNames[currentRotationIndex];
+  document.getElementById('gp-notes').value = gameplanNotes[currentRotationIndex] || '';
+}
+
+function nextRotation() {
+  currentRotationIndex = (currentRotationIndex + 1) % 6;
+  renderRotation();
+}
+function prevRotation() {
+  currentRotationIndex = (currentRotationIndex - 1 + 6) % 6;
+  renderRotation();
+}
+function saveGameplanNote() {
+  gameplanNotes[currentRotationIndex] = document.getElementById('gp-notes').value;
+  alert('Consignes sauvegardées pour ' + rotationNames[currentRotationIndex]);
+}
+function updateGameplanNotes() {}
+
+// ==================== 3. PLANIFICATEUR DE SÉANCE ====================
+let sessionItems = [
+  { title: 'Échauffement articulaire & passes par 2', phase: 'Échauffement', time: 15, mat: '1 ballon / 2 joueurs' },
+  { title: 'Réception sur service flottant + relais passeur', phase: 'Technique', time: 15, mat: 'Chariot de ballons, cibles' },
+  { title: '6c6 avec bonus sur point marqué après réception ++', phase: 'Match à thème', time: 15, mat: 'Terrain complet, tableau score' }
+];
+
+function renderSession() {
+  const list = document.getElementById('session-list');
+  list.innerHTML = '';
+  let total = 0;
+
+  sessionItems.forEach((item, idx) => {
+    total += parseInt(item.time);
+    const card = document.createElement('div');
+    card.className = 'drill-card';
+    card.innerHTML = `
+      <div>
+        <div style="font-weight:700; font-size:1rem;">${idx + 1}. ${item.title}</div>
+        <div class="drill-meta">
+          <span class="tag">${item.phase}</span>
+          <span>⏱️ <b>${item.time} min</b></span>
+          <span>📦 ${item.mat || 'Aucun matériel spécifique'}</span>
+        </div>
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="removeSessionItem(${idx})">🗑️</button>
+    `;
+    list.appendChild(card);
+  });
+
+  document.getElementById('total-duration').innerText = total + ' min';
+}
+
+function addSessionItem() {
+  const title = document.getElementById('new-drill-title').value.trim();
+  if (!title) return;
+  const phase = document.getElementById('new-drill-phase').value;
+  const time = parseInt(document.getElementById('new-drill-time').value) || 10;
+  const mat = document.getElementById('new-drill-mat').value.trim();
+  sessionItems.push({ title, phase, time, mat });
+  document.getElementById('new-drill-title').value = '';
+  document.getElementById('new-drill-mat').value = '';
+  renderSession();
+}
+
+function removeSessionItem(idx) {
+  sessionItems.splice(idx, 1);
+  renderSession();
+}
+
+// ==================== 4. STATISTIQUES LIVE ====================
+let playersStats = [
+  { id: 1, name: '#4 Lucas (R4)', ace: 1, srv_ok: 5, srv_err: 1, rec_perf: 4, rec_ok: 3, rec_err: 1, att_kill: 6, att_def: 3, att_err: 2 },
+  { id: 2, name: '#7 Thomas (Pt)', ace: 2, srv_ok: 4, srv_err: 2, rec_perf: 0, rec_ok: 1, rec_err: 0, att_kill: 8, att_def: 4, att_err: 1 },
+  { id: 3, name: '#10 Hugo (C)', ace: 0, srv_ok: 6, srv_err: 0, rec_perf: 1, rec_ok: 0, rec_err: 0, att_kill: 4, att_def: 1, att_err: 0 },
+  { id: 4, name: '#2 Maxime (L)', ace: 0, srv_ok: 0, srv_err: 0, rec_perf: 7, rec_ok: 4, rec_err: 0, att_kill: 0, att_def: 0, att_err: 0 },
+  { id: 5, name: '#9 Julien (R4)', ace: 1, srv_ok: 4, srv_err: 1, rec_perf: 3, rec_ok: 4, rec_err: 2, att_kill: 5, att_def: 2, att_err: 1 },
+  { id: 6, name: '#1 Antoine (P)', ace: 1, srv_ok: 7, srv_err: 0, rec_perf: 0, rec_ok: 0, rec_err: 0, att_kill: 2, att_def: 0, att_err: 0 }
+];
+let selectedPlayerId = 1;
+let actionHistory = [];
+
+function renderPlayerSelectors() {
+  const grid = document.getElementById('player-selector-grid');
+  grid.innerHTML = '';
+  playersStats.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-sm' + (p.id === selectedPlayerId ? ' active' : '');
+    btn.innerText = p.name;
+    btn.onclick = () => {
+      selectedPlayerId = p.id;
+      document.getElementById('selected-player-lbl').innerText = p.name;
+      renderPlayerSelectors();
+    };
+    grid.appendChild(btn);
+  });
+}
+
+function recordStat(type) {
+  const player = playersStats.find(p => p.id === selectedPlayerId);
+  if (!player) return;
+  player[type]++;
+  actionHistory.push({ playerId: player.id, type });
+  renderStatsDashboard();
+}
+
+function undoLastStat() {
+  const last = actionHistory.pop();
+  if (!last) return;
+  const player = playersStats.find(p => p.id === last.playerId);
+  if (player && player[last.type] > 0) player[last.type]--;
+  renderStatsDashboard();
+}
+
+function resetStats() {
+  if (!confirm('Remettre toutes les statistiques à zéro ?')) return;
+  playersStats.forEach(p => {
+    p.ace = p.srv_ok = p.srv_err = p.rec_perf = p.rec_ok = p.rec_err = p.att_kill = p.att_def = p.att_err = 0;
+  });
+  actionHistory = [];
+  renderStatsDashboard();
+}
+
+function addNewPlayerStat() {
+  const name = prompt('Nom et numéro du joueur (ex: #12 Léo (C)) :');
+  if (!name) return;
+  const newId = Date.now();
+  playersStats.push({ id: newId, name, ace: 0, srv_ok: 0, srv_err: 0, rec_perf: 0, rec_ok: 0, rec_err: 0, att_kill: 0, att_def: 0, att_err: 0 });
+  selectedPlayerId = newId;
+  document.getElementById('selected-player-lbl').innerText = name;
+  renderPlayerSelectors();
+  renderStatsDashboard();
+}
+
+function renderStatsDashboard() {
+  const tbody = document.getElementById('stats-table-body');
+  tbody.innerHTML = '';
+
+  let totAttKill = 0, totAttErr = 0, totAtt = 0;
+  let totRecPos = 0, totRec = 0;
+  let totAces = 0, totErrors = 0;
+
+  playersStats.forEach(p => {
+    const srvTot = p.ace + p.srv_ok + p.srv_err;
+    const recTot = p.rec_perf + p.rec_ok + p.rec_err;
+    const recPosPct = recTot ? Math.round(((p.rec_perf + p.rec_ok) / recTot) * 100) : 0;
+    const attTot = p.att_kill + p.att_def + p.att_err;
+    const attEffPct = attTot ? Math.round(((p.att_kill - p.att_err) / attTot) * 100) : 0;
+    const ptsWon = p.ace + p.att_kill;
+    const faults = p.srv_err + p.rec_err + p.att_err;
+
+    totAttKill += p.att_kill;
+    totAttErr += p.att_err;
+    totAtt += attTot;
+    totRecPos += (p.rec_perf + p.rec_ok);
+    totRec += recTot;
+    totAces += p.ace;
+    totErrors += faults;
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><b>${p.name}</b></td>
+      <td style="color:var(--green); font-weight:800;">+${ptsWon}</td>
+      <td>${p.ace} / ${srvTot} <small style="color:var(--red)">(${p.srv_err} fte)</small></td>
+      <td>${p.rec_perf}++ / <b>${recPosPct}%</b> <small>(${recTot})</small></td>
+      <td>${p.att_kill}/${attTot} (<b>${attEffPct}%</b>)</td>
+      <td style="color:var(--red); font-weight:700;">${faults}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('kpi-eff-att').innerText = (totAtt ? Math.round(((totAttKill - totAttErr) / totAtt) * 100) : 0) + '%';
+  document.getElementById('kpi-pos-rec').innerText = (totRec ? Math.round((totRecPos / totRec) * 100) : 0) + '%';
+  document.getElementById('kpi-aces').innerText = totAces;
+  document.getElementById('kpi-errors').innerText = totErrors;
+}
+
+renderFramesUI();
+renderBoard();
+refreshSavedDrillsSelect();
+renderRotation();
+renderSession();
+renderPlayerSelectors();
+renderStatsDashboard();
+</script>
+</body>
+</html>
